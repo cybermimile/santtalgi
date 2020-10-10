@@ -1,0 +1,195 @@
+--- List of constants
+F_CPU : CPU frequency (12000000UL)
+F : CPU frequency in 0.1MHz (120)
+USART_BAUDRATE : Baud rate for serial communication (57600)
+BAUD_PRESCALE : Value of the prescaler for a given baud rate (((F_CPU / (USART_BAUDRATE * 16UL))) - 1)
+MAXSTR : Maximal length for strings to be transmitted by serial communication (50)
+SIZE_CMD : Size of the command key words CMD (6)
+SIZE_ARG : Size of the arguments argument (4)
+SIZE_COMMAND : Size of the full command COMMAND (SIZE_CMD+N_ARG*(SIZE_ARG+1)) (20)
+N_ARG : Maximal number of arguments (3)
+N_INSTR : Maximal number of instructions in the list (10)
+MAXPULSE : Maximal numver of pulses recorded for IR decode (20000)
+RES : Resolution of IR decode (5)
+EBAR : Error bar for IR decode (100)
+NBPULSE : Maximal number of pulses recorded for IR decode (50)
+
+--- List of commands
+-> WRPINB, WRPINC, WRPIND
+CALL: WR_REG(&PORT);
+DESCRIPTION: Digital write HIGH/LOW to a pin via PORT register
+ARGUMENTS (2): ARG0 = pin number, ARG1 = value (0 or 1)
+ERRORS: ER3 if len(ARG0)!=1, ER5 if pin>7, ER5 if ARG1 not 0 or 1, ER7 (though CHK_REG();) when addressing PB6, PB7, PC6, PC7, PD0, PD1.
+
+-> DRPINB, DRPINC, DRPIND
+CALL: WR_REG(&DDR);
+DESCRIPTION: Select pin as INPUT/OUTPUT via DDR register
+ARGUMENTS (2): ARG0 = pin number, ARG1 = value (0 or 1)
+ERRORS: ER3 if len(ARG0)!=1, ER5 if pin>7, ER5 if ARG1 not 0 or 1, ER7 (though CHK_REG();) when addressing PB6, PB7, PC6, PC7, PD0, PD1.
+
+-> RDPINB, RDPINC, RDPIND
+CALL: RD_REG(&PIN);
+DESCRIPTION: Digital read HIGH/LOW of a pin via PIN register
+ARGUMENTS (1): ARG0 = pin number
+RETURN: 'RD:0' (LOW) or 'RD:1' (HIGH)
+ERRORS: ER3 if len(ARG0)!=1, ER5 if pin>7, ER7 when addressing PB6, PB7, PC6, PC7, PD0, PD1.
+
+-> BLPINB, BLPINC, BLPIND
+CALL: BLINK(&PORT);
+DESCRIPTION: Blink a pin for a duration (on-wait-off) using PORT register
+ARGUMENTS (3): ARG0 = pin number, ARG1 = duration (0-9999), ARG2 = unit (S = seconds, M = miliseconds, U = microseconds)
+ERRORS: ER8 if pin>7, ER9 if ARG2 not S,M,U, ER7 (though CHK_REG();) when addressing PB6, PB7, PC6, PC7, PD0, PD1.
+
+-> MCWAIT
+CALL: WAIT();
+DESCRIPTION: Sleep for a duration
+ARGUMENTS (2): ARG0 = duration (0-9999), ARG1 = unit (S = seconds, M = miliseconds, U = microseconds)
+ERRORS: ER5 if ARG1 not S,M,U.
+
+-> WRPRTB, WRPRTC, WRPRTD
+CALL: WR_REG_BYTE(&PORT);
+DESCRIPTION: Write an 8-bits value to register PORT
+ARGUMENTS (1): ARG0 = value
+ERRORS: ER4 if value>255.
+
+-> WRDDRB, WRDDRC, WRDDRD
+CALL: WR_REG_BYTE(&DDR);
+DESCRIPTION: Write an 8-bits value to register DDR
+ARGUMENTS (1): ARG0 = value
+ERRORS: ER4 if value>255.
+
+-> SRESET
+CALL: reset();
+DESCRIPTION: Soft reset of the chip
+ARGUMENTS (0)
+
+-> RDEEPR
+CALL: EEPROM_RD();
+DESCRIPTION: Display the content of the EEPROM.
+ARGUMENTS (0)
+RETURN: 'RD:' + 512 bytes
+
+
+-> WREEPR
+CALL: EEPROM_WR();
+DESCRIPTION: Write up to SIZE_ARG characters to the eeprom at position ARG0
+ARGUMENTS (2): ARG0 = address, ARG1 = value
+ERRORS: ER4 if address > 511
+
+-> CLEEPR
+CALL: EEPROM_CLEAR();
+DESCRIPTION: Write the char '\0' for every byte of the eeprrom
+
+-> RAPINC
+CALL: RD_ADC();
+DESCRIPTION: Analogue read of a pin on port C using the ADC (5V ref voltage, F/128)
+ARGUMENTS (1): ARG0 = pin number
+RETURN: 'RD:' + value (0-1023)
+ERRORS: ER4 if pin>5
+
+-> FPWMB1, FPWMB2, FPWMB3
+CALL: FPWM_Set(pin);
+DESCRIPTION: Start a PWM with freq and duty cycle on pin PB1, PB2, PB3 (PB1&2 16-bit TimerCounter1, PB2 8-bit TimerCounter2)
+ARGUMENTS (2): ARG0 = prescaler (PB1&2 0-5 F/(1,8,64,256,1024) PB3 0-7 F/(1,8,32,64,128,256,1024)), ARG1 = duty (PB1&2 0-1023 , PB3 0-255)
+ERRORS: ER4 if prescaler >5 (PB1&2) or >7 (PB3), ER5 if duty>100
+
+-> SPWMB1, SPWMB2, SPWMB3
+CALL: FPWM_Stop(pin);
+DESCRIPTION: Stop the PWM signal on the corresponding pin (disconnect the pin in TCCR and set OCR = 0)
+ARGUMENTS (0)
+
+-> WRINT0, WRINT1
+CALL: INT0_Set(); , INT1_Set();
+DESCRIPTION: Attach an external interrupt to pins PD2 (INT0) or PD3 (INT1)
+ARGUMENTS (1): ARG0 = interrupt type (L = Low level, T = Toggle, F = Falling edge, R = Rising edge)
+ERRORS: ER4 if ARG0 different from L, T, F, R
+NOTES: To avoid bouncing, a pull-up is set for L and F, a pull-down for R, and PORTD is untouched for T.
+
+-> STINT0, STINT1
+CALL: INT0_Stop(); , INT1_Stop();
+DESCRIPTION: Detach the external interrupt via register GICR
+ARGUMENTS (0)
+
+-> IRDCD0
+CALL: INTIR_Set();
+DESCRIPTION: Start the decoding of IR signals using PD2 (INT0)
+ARGUMENTS (0)
+RETURN: 'IR Decode:' + table of recorded pulses separated with ':' (alternating HIGH/LOW) + '\nSignal valid\nWord' + word (int32)
+
+-> STDCD0
+CALL: INTIR_Stop();
+DESCRIPTION: Stop the decoding of IR signals (detach INT0, unflag is_IR_on)
+ARGUMENTS (0)
+
+-> WINSTR
+CALL: INSTR_Record();
+DESCRIPTION: Start enterring a queue of instructions to be executed later in the table INSTR_CMD. Stop when the keyword 'END' is entered, or the maximal number of instruction (N_INSTR) has been reached
+ARGUMENTS (0)
+ERROR: ERA if too many instructions provided
+
+-> LINSTR
+CALL: INSTR_List(); 
+DESCRIPTION: Display all the instructions recorded in the queue INSTR_CMD.
+RETURN: List 'n:INSTR\n' where n is the instruction number and INSTR is the COMMAND to be executed 
+ARGUMENTS (0)
+
+-> EINSTR
+CALL: INSTR_Execute();
+DESCRIPTION: Execute the list of instructions in the queue INSTR_CMD once.
+ARGUMENTS (0)
+
+
+-> RINSTR
+CALL: INSTR_Repeat();
+DESCRIPTION: Repeat the execution of the list of instructions in the queue INSTR_CMD ARG0 times.
+ARGUMENTS (1): ARG0 = number of executions (0--9999)
+
+-> UINSTR
+CALL: INSTR_Until();
+DESCRIPTION: Repeat the execution of the list of instructions in the queue INSTR_CMD until the character 'q' is received by the USART
+ARGUMENTS (0)
+NOTE: Return 'B' (ERB) when the program is interrupted
+
+-> INGOTO
+CALL: INSTR_Goto();
+DESCRIPTION: Goto to instruction ARG0
+ARGUMENTS (1): ARG0 = target instruction number (0--INSTR_end)
+ERRORS: ER4 if ARG0 > INSTR_end
+NOTE: instruction number starts at 0
+
+-> IFPINB, IFPINC, IFPINC
+CALL: INSTR_Ifpin(&PINB);
+DESCRIPTION: Skip the next instruction if PIN is LOW
+ERRORS: ERC if not followed by an instruction, ER3 is length(ARG0)!=1, ER4 is ARG0 not number between '0'=48 and '7'=55
+
+-> WSQRB1, WSQRB2, WSQRB3
+CALL: SQUARE_Set(1);
+DESCRIPTION: Start a square signal with a given frequency on pin PB1, PB2, PB3 (PB1&2 16-bit TimerCounter1, PB2 8-bit TimerCounter2)
+ARGUMENTS (2): freq = ARG0*10^ARG1
+ERRORS: ER5 if power>6 or f>F_CPU
+
+-> SPWMB1, SPWMB2, SPWMB3
+CALL: FPWM_Stop(pin);
+DESCRIPTION: Stop the square signal on the corresponding pin (disconnect the pin in TCCR and set OCR = 0)
+ARGUMENTS (0)
+
+-> SERVB1, SERVB2
+CALL: FPWM_Servo();
+DESCRIPTION: Start a PWM signal of 50Hz on PB1, PB2 to control a servo (use the 16-bit TimerCounter1 !!! only works with FCPU=12MHz)
+ARGUMENTS (1): range (0-9999) control the pulse duration, 0=1ms, 1500=2ms, 3000=3ms,...
+
+
+
+--- Error codes
+1: Invalid command (too short)
+2: Invalid command
+3: Invalid argument (wrong size)
+4: Invalid argument 0 (value)
+5: Invalid argument 1 (value)
+6: Invalid command (not recognized)
+7: Invalid pin (reserved)
+8: Invalid pin number (out of range)
+9: Invalid argument 3 (value S, M, U)
+A: Too many instructions in list
+B: Execution interrupted by user
+C: IFPIN need onefollow-up instructions
